@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { UserPreferences, GeneratedGame, GameAudio, ForgeManifest } from "../types";
+import { UserPreferences, GeneratedGame, GameAudio, ForgeManifest, RefinementSettings } from "../types";
 import { generateShortHash } from "../utils/tokenEstimator";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -481,7 +481,7 @@ export const generatePrototype = async (blueprint: GeneratedGame, prefs: UserPre
 
 // --- PHASE 4: DIFFERENTIAL REFINEMENT ---
 
-export const refineGame = async (currentGame: GeneratedGame, instruction: string): Promise<GeneratedGame> => {
+export const refineGame = async (currentGame: GeneratedGame, instruction: string, settings?: RefinementSettings): Promise<GeneratedGame> => {
     // Compress context to save tokens (remove huge assets)
     const contextCode = compressCodeForContext(currentGame.html || "");
 
@@ -511,8 +511,11 @@ export const refineGame = async (currentGame: GeneratedGame, instruction: string
         config: {
           responseMimeType: "application/json",
           responseSchema: refinementSchema,
-          thinkingConfig: { thinkingBudget: 4096 }, // Increased thinking for complex refactors
-          maxOutputTokens: 65536 // Increased to allow full file rewrite if needed
+          thinkingConfig: { thinkingBudget: 4096 },
+          maxOutputTokens: settings?.maxOutputTokens ?? 65536,
+          temperature: settings?.temperature ?? 0.7,
+          topP: settings?.topP ?? 0.95,
+          topK: settings?.topK ?? 40
         }
       });
       

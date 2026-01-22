@@ -139,6 +139,13 @@ export interface GameAudio {
   }[];
 }
 
+export interface RefinementSettings {
+  temperature: number;      // Creativity (0.0 - 2.0)
+  maxOutputTokens: number;  // Length
+  topP: number;            // Probability Mass
+  topK: number;            // Token Pool Size
+}
+
 export interface ForgeManifest {
   version: string;
   timestamp: number;

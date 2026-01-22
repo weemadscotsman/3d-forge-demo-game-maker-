@@ -9,7 +9,7 @@ import { estimateTokens, formatTokenCount, generateShortHash } from './utils/tok
 import { 
   UserPreferences, GeneratedGame, Genre, Platform, SkillLevel, ArchitectureStyle,
   VisualStyle, CameraPerspective, EnvironmentType, Atmosphere, Pacing, TokenTransaction,
-  QualityLevel, CapabilityFlags
+  QualityLevel, CapabilityFlags, RefinementSettings
 } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 // @ts-ignore
@@ -36,6 +36,15 @@ const App: React.FC = () => {
   const [seedLocked, setSeedLocked] = useState(false);
   const [specFrozen, setSpecFrozen] = useState(false);
   
+  // Refinement Tuning State
+  const [showRefineSettings, setShowRefineSettings] = useState(false);
+  const [refineSettings, setRefineSettings] = useState<RefinementSettings>({
+      temperature: 0.7,
+      maxOutputTokens: 65536,
+      topP: 0.95,
+      topK: 40
+  });
+
   // Token Tracking
   const [totalTokens, setTotalTokens] = useState<number>(0);
   const [tokenHistory, setTokenHistory] = useState<TokenTransaction[]>([]);
@@ -249,9 +258,10 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
     setChangeLog(prev => [newLogItem, ...prev]);
 
     try {
-        const result = await refineGame(game, refinePrompt);
+        // Pass refinement settings to the service
+        const result = await refineGame(game, refinePrompt, refineSettings);
         if (!abortRef.current) {
-            addToTokenTotal("Refine Code", {game: game.html, prompt: refinePrompt}, result.html);
+            addToTokenTotal("Refine Code", {game: game.html, prompt: refinePrompt, settings: refineSettings}, result.html);
             setGame(result);
             setRefinePrompt(''); 
             setPhase('complete');
@@ -658,10 +668,81 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
                         className="relative z-50 bg-zinc-900 border border-zinc-700 rounded-xl p-5 shadow-2xl flex flex-col gap-4"
                     >
                         <div>
-                            <h2 className="text-xs font-bold mb-3 flex items-center gap-2 text-green-400 uppercase tracking-widest">
-                                <Icons.Code className="w-4 h-4" />
-                                Iterate & Polish
-                            </h2>
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-xs font-bold flex items-center gap-2 text-green-400 uppercase tracking-widest">
+                                    <Icons.Code className="w-4 h-4" />
+                                    Iterate & Polish
+                                </h2>
+                                <button 
+                                    onClick={() => setShowRefineSettings(!showRefineSettings)}
+                                    className={`text-[10px] uppercase font-bold px-2 py-1 rounded transition-colors ${showRefineSettings ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    {showRefineSettings ? 'Hide Tuning' : 'Tune Parameters'}
+                                </button>
+                            </div>
+
+                            <AnimatePresence>
+                                {showRefineSettings && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="overflow-hidden bg-zinc-950/50 rounded-lg border border-zinc-800 mb-3"
+                                    >
+                                        <div className="p-3 grid grid-cols-1 gap-3">
+                                            {/* Temperature */}
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Creativity (Temp)</label>
+                                                    <span className="text-[10px] font-mono text-zinc-300">{refineSettings.temperature.toFixed(1)}</span>
+                                                </div>
+                                                <input 
+                                                    type="range" 
+                                                    min="0" max="2" step="0.1"
+                                                    value={refineSettings.temperature}
+                                                    onChange={(e) => setRefineSettings({...refineSettings, temperature: parseFloat(e.target.value)})}
+                                                    className="w-full accent-indigo-500 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                                />
+                                            </div>
+                                            
+                                            {/* Max Tokens */}
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Response Length</label>
+                                                    <span className="text-[10px] font-mono text-zinc-300">
+                                                        {refineSettings.maxOutputTokens >= 65536 ? 'Max (65k)' : 
+                                                         refineSettings.maxOutputTokens >= 32000 ? 'Long (32k)' :
+                                                         refineSettings.maxOutputTokens >= 8000 ? 'Medium (8k)' : 'Short (2k)'}
+                                                    </span>
+                                                </div>
+                                                <input 
+                                                    type="range" 
+                                                    min="2000" max="65536" step="1000"
+                                                    value={refineSettings.maxOutputTokens}
+                                                    onChange={(e) => setRefineSettings({...refineSettings, maxOutputTokens: parseInt(e.target.value)})}
+                                                    className="w-full accent-green-500 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                                />
+                                            </div>
+
+                                            {/* Top P */}
+                                             <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Guidance (Top P)</label>
+                                                    <span className="text-[10px] font-mono text-zinc-300">{refineSettings.topP.toFixed(2)}</span>
+                                                </div>
+                                                <input 
+                                                    type="range" 
+                                                    min="0.1" max="1" step="0.05"
+                                                    value={refineSettings.topP}
+                                                    onChange={(e) => setRefineSettings({...refineSettings, topP: parseFloat(e.target.value)})}
+                                                    className="w-full accent-blue-500 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <div className="space-y-3">
                                 <textarea 
                                     autoFocus
