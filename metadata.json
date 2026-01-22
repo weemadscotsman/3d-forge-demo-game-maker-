@@ -1,0 +1,5 @@
+{
+  "name": "Gemini 3D Forge",
+  "description": "Generate and play 3D game demos instantly using Gemini 3.",
+  "requestFramePermissions": []
+}
