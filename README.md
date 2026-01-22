@@ -22,11 +22,17 @@ The engine creates a complete soundscape using the Web Audio API without externa
 - **BGM**: Mathematically generated background loops using Oscillators and GainNodes.
 - **SFX**: Synthesized sound effects linked to specific gameplay triggers (e.g., jump, shoot).
 
-### 🎛️ Advanced Refinement Tuning
-Iterate on your game with fine-grained control over the AI's generation parameters:
-- **Creativity (Temperature)**: adjust for wilder ideas or stricter logic.
-- **Guidance (Top P)**: Focus the model's reasoning path.
-- **Output Length**: Increase token limits for complex refactors or large system additions.
+### 📦 Full State Export
+The export package now includes:
+- `blueprint.json`: The complete raw JSON specification.
+- `forge.manifest.json`: Versioning and cryptographic hashes for provenance.
+- `index.html`: The standalone executable.
+
+### 🛠️ Developer Extensibility
+Dream3DForge is built to be extended:
+- **Prompt Registry**: All AI prompts are centralized in `services/promptRegistry.ts` for easy tuning.
+- **Provider Abstraction**: `services/client.ts` supports runtime swapping of AI providers (e.g., Local LLMs).
+- **Versioning**: Strict semantic versioning ensures blueprint compatibility across updates.
 
 ### 🛡️ Live Telemetry & Safety
 - **Kill Switch**: Instantly terminates the WebGL runtime/iframe if it freezes or causes performance issues.

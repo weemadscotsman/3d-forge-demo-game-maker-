@@ -9,6 +9,7 @@ interface Props {
 interface TelemetryData {
     fps: number;
     entities: number;
+    frameTime?: number;
 }
 
 export const GamePreview: React.FC<Props> = ({ html, title }) => {
@@ -44,7 +45,8 @@ export const GamePreview: React.FC<Props> = ({ html, title }) => {
           if (e.data && e.data.type === 'forge-telemetry') {
               setTelemetry({
                   fps: e.data.fps || 0,
-                  entities: e.data.entities || 0
+                  entities: e.data.entities || 0,
+                  frameTime: e.data.frameTime // Support explicit frame time if sent
               });
           }
       };
@@ -119,6 +121,11 @@ export const GamePreview: React.FC<Props> = ({ html, title }) => {
       );
   }
 
+  // Calculate approximate frame time if not provided
+  const displayFrameTime = telemetry.frameTime 
+      ? telemetry.frameTime.toFixed(1) 
+      : (telemetry.fps > 0 ? (1000 / telemetry.fps).toFixed(1) : '0.0');
+
   return (
     <div className="w-full h-full flex flex-col bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 relative">
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-950 border-b border-zinc-800 z-10">
@@ -155,13 +162,30 @@ export const GamePreview: React.FC<Props> = ({ html, title }) => {
 
         {/* Telemetry HUD */}
         {isPlaying && (
-            <div className="absolute top-4 left-4 pointer-events-none z-30 flex flex-col gap-1">
-                <div className="bg-black/50 backdrop-blur-md px-2 py-1 rounded border border-white/10 text-[10px] font-mono text-green-400">
-                    FPS: {telemetry.fps}
-                </div>
-                <div className="bg-black/50 backdrop-blur-md px-2 py-1 rounded border border-white/10 text-[10px] font-mono text-blue-400">
-                    OBJ: {telemetry.entities}
-                </div>
+            <div className="absolute top-4 left-4 pointer-events-none z-30 select-none">
+                 <div className="bg-zinc-950/90 backdrop-blur-md p-3 rounded-lg border border-zinc-800 shadow-2xl flex flex-col gap-2 min-w-[140px]">
+                    <div className="flex items-center gap-2 border-b border-zinc-800 pb-2 mb-1">
+                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                         <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">Engine Stats</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <span className="text-[10px] font-mono text-zinc-500">FPS</span>
+                        <span className={`text-[10px] font-mono text-right font-bold ${telemetry.fps < 30 ? "text-red-400" : "text-green-400"}`}>
+                            {Math.round(telemetry.fps)}
+                        </span>
+
+                        <span className="text-[10px] font-mono text-zinc-500">Lat.</span>
+                        <span className="text-[10px] font-mono text-right text-zinc-300">
+                            {displayFrameTime}ms
+                        </span>
+
+                        <span className="text-[10px] font-mono text-zinc-500">Ents</span>
+                        <span className="text-[10px] font-mono text-right text-blue-400">
+                            {telemetry.entities}
+                        </span>
+                    </div>
+                 </div>
             </div>
         )}
 

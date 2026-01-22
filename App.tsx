@@ -9,11 +9,12 @@ import { estimateTokens, formatTokenCount, generateShortHash } from './utils/tok
 import { 
   UserPreferences, GeneratedGame, Genre, Platform, SkillLevel, ArchitectureStyle,
   VisualStyle, CameraPerspective, EnvironmentType, Atmosphere, Pacing, TokenTransaction,
-  QualityLevel, CapabilityFlags, RefinementSettings
+  QualityLevel, CapabilityFlags, RefinementSettings, GameEngine
 } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 // @ts-ignore
 import JSZip from 'jszip';
+import { ENGINE_VERSION } from './version';
 
 type GenerationPhase = 'idle' | 'generating_blueprint' | 'blueprint_ready' | 'generating_audio' | 'generating_prototype' | 'complete';
 
@@ -57,6 +58,7 @@ const App: React.FC = () => {
   const [prefs, setPrefs] = useState<UserPreferences>({
     genre: Genre.FPS,
     platform: Platform.Web,
+    gameEngine: GameEngine.ThreeJS,
     skillLevel: SkillLevel.Beginner,
     architectureStyle: ArchitectureStyle.Auto,
     projectDescription: '',
@@ -95,10 +97,13 @@ const App: React.FC = () => {
       // 1. Manifest
       zip.file("forge.manifest.json", JSON.stringify(game.manifest, null, 2));
       
-      // 2. Source Code
+      // 2. Raw Blueprint (New Feature)
+      zip.file("blueprint.json", JSON.stringify(game, null, 2));
+
+      // 3. Source Code
       zip.file("index.html", game.html || "");
       
-      // 3. Documentation
+      // 4. Documentation
       const readme = `# ${game.title}
       
 ${game.summary}
@@ -113,8 +118,14 @@ ${game.audio?.soundEffects?.length ? `### Sound Effects\n${game.audio.soundEffec
 ## Tech Stack
 ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
 
+## Project Structure
+- **index.html**: The playable game prototype.
+- **blueprint.json**: Raw architectural specification (JSON). Use this for seed-based diffing or regenerating the game with the same logic.
+- **forge.manifest.json**: Cryptographic proof of generation. Contains the Version, Seed, and Hashes.
+
 ## Build Metadata
-- Version: ${game.manifest.version}
+- Engine Version: ${game.manifest.version}
+- Game Engine: ${prefs.gameEngine}
 - Seed: ${game.manifest.seed}
 - Spec Hash: ${game.manifest.specHash}
 - Build Hash: ${game.manifest.buildHash}
@@ -329,13 +340,13 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
   );
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100 selection:bg-indigo-500/30 font-sans">
+    <div className="min-h-screen bg-black text-zinc-100 selection:bg-indigo-500/30 font-sans flex flex-col">
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-900/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-[1800px] mx-auto px-4 py-6 lg:px-8 h-screen flex flex-col">
+      <div className="relative z-10 max-w-[1800px] mx-auto px-4 py-6 lg:px-8 flex-1 flex flex-col w-full">
         
         {/* Header */}
         <header className="shrink-0 mb-6 flex flex-col border-b border-zinc-800 pb-4 relative">
@@ -421,19 +432,6 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
                   </select>
               </div>
 
-               {/* GPU Tier */}
-               <div className="flex items-center gap-2 bg-zinc-900 px-3 py-1.5 rounded border border-zinc-800">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider">GPU</span>
-                  <select 
-                      value={prefs.capabilities.gpuTier}
-                      onChange={(e: any) => setPrefs(p => ({...p, capabilities: {...p.capabilities, gpuTier: e.target.value}}))}
-                      className="bg-transparent text-xs text-zinc-300 outline-none uppercase"
-                  >
-                      <option value="low">Low (Mobile)</option>
-                      <option value="high">High (Desktop)</option>
-                  </select>
-              </div>
-
               {/* Telemetry Toggle */}
               <button 
                   onClick={() => setPrefs(p => ({...p, capabilities: {...p.capabilities, telemetry: !p.capabilities.telemetry}}))}
@@ -485,6 +483,15 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
                         <Icons.Cpu className="w-3 h-3" /> Core Identity
                     </h3>
                     <div className="grid grid-cols-1 gap-3">
+                         {/* GAME ENGINE SELECTOR - NEW */}
+                         <SelectField 
+                            label="Game Engine"
+                            value={prefs.gameEngine}
+                            options={GameEngine}
+                            onChange={(e: any) => setPrefs(p => ({...p, gameEngine: e.target.value}))}
+                            disabled={specFrozen}
+                        />
+
                         <SelectField 
                             label="Target Platform"
                             value={prefs.platform}
@@ -543,6 +550,20 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
                             onChange={(e: any) => setPrefs(p => ({...p, atmosphere: e.target.value}))}
                             disabled={specFrozen}
                         />
+                        {/* GPU Tier */}
+                        <div>
+                            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">GPU Performance</label>
+                            <select 
+                                disabled={specFrozen}
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-2 text-xs text-zinc-300 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all hover:bg-zinc-900"
+                                value={prefs.capabilities.gpuTier}
+                                onChange={(e: any) => setPrefs(p => ({...p, capabilities: {...p.capabilities, gpuTier: e.target.value}}))}
+                            >
+                                <option value="low">Low (Mobile / iGPU)</option>
+                                <option value="mid">Mid (Laptop / Standard)</option>
+                                <option value="high">High (Desktop / Discrete)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -1056,6 +1077,10 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
             </AnimatePresence>
           </div>
         </div>
+        
+        <footer className="shrink-0 mt-4 py-2 border-t border-zinc-900 text-center">
+             <span className="text-[10px] text-zinc-600 font-mono">Dream3DForge v{ENGINE_VERSION}</span>
+        </footer>
       </div>
     </div>
   );

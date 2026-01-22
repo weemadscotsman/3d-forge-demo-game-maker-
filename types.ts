@@ -1,3 +1,4 @@
+
 export enum Genre {
   FPS = 'First Person Shooter',
   RPG = 'Role Playing Game',
@@ -77,6 +78,15 @@ export enum Pacing {
 
 // --- PRO FEATURES ---
 
+export enum GameEngine {
+  ThreeJS = 'Three.js (Standard)',
+  ThreeJS_WebGPU = 'Three.js (WebGPU Experimental)',
+  P5JS = 'p5.js (Creative Coding)',
+  BabylonJS = 'Babylon.js (Enterprise 3D)',
+  KaboomJS = 'Kaboom.js (2D/Retro)',
+  RawWebGL = 'Raw WebGL (No Engine)'
+}
+
 export enum QualityLevel {
   Sketch = 'Sketch (Low Detail, Fast)',
   Prototype = 'Prototype (Standard)',
@@ -84,7 +94,7 @@ export enum QualityLevel {
 }
 
 export interface CapabilityFlags {
-  gpuTier: 'low' | 'high';
+  gpuTier: 'low' | 'mid' | 'high';
   input: 'mouse' | 'touch' | 'gamepad';
   telemetry: boolean;
 }
@@ -93,6 +103,7 @@ export interface UserPreferences {
   // Core
   genre: Genre;
   platform: Platform;
+  gameEngine: GameEngine;
   skillLevel: SkillLevel;
   architectureStyle: ArchitectureStyle;
   projectDescription: string;
@@ -154,6 +165,7 @@ export interface ForgeManifest {
   buildHash: string; // Hash of the generated HTML
   platform: Platform;
   quality: QualityLevel;
+  parentHash?: string; // For diffing/lineage
 }
 
 export interface GeneratedGame {
