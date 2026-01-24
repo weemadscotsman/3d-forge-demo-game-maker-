@@ -145,6 +145,8 @@ export const PromptRegistry = {
 
     USER SETTINGS (Strict Enforcement):
     - ENGINE: ${prefs.gameEngine}
+    - PLATFORM: ${prefs.platform}
+    - INPUT MODE: ${prefs.capabilities.input}
     - Style: ${prefs.visualStyle}
     - Camera: ${prefs.cameraPerspective}
     - Env: ${prefs.environmentType}

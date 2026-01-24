@@ -322,6 +322,20 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
       }
   };
 
+  const handlePlatformChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newPlatform = e.target.value as Platform;
+    // Auto-configure input based on platform
+    let newInput: 'mouse' | 'touch' | 'gamepad' = 'mouse';
+    if (newPlatform === Platform.Mobile) newInput = 'touch';
+    if (newPlatform === Platform.Console) newInput = 'gamepad';
+    
+    setPrefs(p => ({
+        ...p, 
+        platform: newPlatform,
+        capabilities: { ...p.capabilities, input: newInput }
+    }));
+  };
+
   // Helper for select inputs
   const SelectField = ({ label, value, onChange, options, disabled }: any) => (
     <div className={disabled ? 'opacity-50 pointer-events-none' : ''}>
@@ -432,6 +446,17 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
                   </select>
               </div>
 
+              {/* Input Mode Indicator */}
+               <div className="flex items-center gap-2 bg-zinc-900 px-3 py-1.5 rounded border border-zinc-800 text-zinc-500">
+                  <span className="text-[10px] uppercase tracking-wider">Input</span>
+                  <span className="text-xs text-zinc-300 font-mono flex items-center gap-1.5">
+                    {prefs.capabilities.input === 'touch' ? <Icons.Mobile className="w-3 h-3" /> : 
+                     prefs.capabilities.input === 'gamepad' ? <Icons.Gamepad className="w-3 h-3" /> : 
+                     <Icons.Monitor className="w-3 h-3" />}
+                    {prefs.capabilities.input.toUpperCase()}
+                  </span>
+              </div>
+
               {/* Telemetry Toggle */}
               <button 
                   onClick={() => setPrefs(p => ({...p, capabilities: {...p.capabilities, telemetry: !p.capabilities.telemetry}}))}
@@ -476,14 +501,14 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
               </div>
               
               <div className={`space-y-6 ${specFrozen ? 'opacity-30 pointer-events-none grayscale' : (phase !== 'idle' ? 'opacity-50 pointer-events-none' : '')}`}>
-                {/* ... (Existing Settings Code Unchanged) ... */}
+                
                  {/* Section 1: Core Identity */}
                 <div className="space-y-3 pb-4 border-b border-zinc-800/50">
                     <h3 className="text-xs font-bold text-zinc-200 flex items-center gap-2">
                         <Icons.Cpu className="w-3 h-3" /> Core Identity
                     </h3>
                     <div className="grid grid-cols-1 gap-3">
-                         {/* GAME ENGINE SELECTOR - NEW */}
+                         {/* GAME ENGINE SELECTOR */}
                          <SelectField 
                             label="Game Engine"
                             value={prefs.gameEngine}
@@ -496,7 +521,7 @@ ${game.techStack.map(t => `- ${t.name}: ${t.description}`).join('\n')}
                             label="Target Platform"
                             value={prefs.platform}
                             options={Platform}
-                            onChange={(e: any) => setPrefs(p => ({...p, platform: e.target.value}))}
+                            onChange={handlePlatformChange}
                             disabled={specFrozen}
                         />
                          <SelectField 
